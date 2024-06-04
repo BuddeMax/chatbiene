@@ -9,6 +9,10 @@ module.exports = {
         target: 'http://localhost:3000',
         ws: false,
       },
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      },
     },
   },
 };

@@ -1,21 +1,21 @@
 const path = require('path');
-const http = require('http');
 const express = require('express');
-const socketio = require('socket.io');
+const http = require('http');
 const os = require('os');
+const socketio = require('socket.io');
 const formatMessage = require('./utils/messages');
-const { userJoin, getCurrentUser, userLeave, getRoomUsers } = require('./utils/users');
+const { userJoin, getCurrentUser, userLeave, getRoomUsers, addRoom, generateRoomCode } = require('./utils/users');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
 
-// Set static folder
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
 
 const botName = 'ChatCord Bot';
 
-// Get local network IP address
+// Function to get the local IP address
 function getIPAddress() {
     const interfaces = os.networkInterfaces();
     for (let devName in interfaces) {
@@ -33,13 +33,22 @@ function getIPAddress() {
 const ipAddress = getIPAddress();
 console.log(`Server running on IP: ${ipAddress}`);
 
+// API route to create a room
+app.post('/api/create-room', (req, res) => {
+    const { roomName } = req.body;
+    const roomCode = generateRoomCode();
+    addRoom(roomCode, roomName);
+    console.log(`Room created: ${roomName} with code ${roomCode}`);
+    res.json({ roomCode });
+});
+
 io.on('connection', (socket) => {
     socket.on('joinRoom', ({ username, room }) => {
         const user = userJoin(socket.id, username, room);
         socket.join(user.room);
 
         socket.emit('message', formatMessage(botName, 'Welcome to ChatCord!'));
-        socket.emit('ipAddress', ipAddress);
+        socket.emit('ipAddress', ipAddress); // Send the IP address to the client
 
         socket.broadcast.to(user.room).emit('message', formatMessage(botName, `${user.username} has joined the chat`));
 
