@@ -7,7 +7,7 @@
       <form @submit.prevent="joinChat">
         <div class="form-control">
           <label for="username">Username</label>
-          <InputText v-model="username" placeholder="Enter username..." required />
+          <input type="text" v-model="username" placeholder="Enter username..." required />
         </div>
         <div class="form-control">
           <label for="room">Room</label>
@@ -16,7 +16,7 @@
             <option value="Helpdesk 2">Helpdesk 2</option>
           </select>
         </div>
-        <Button type="submit" label="Join Chat" class="p-button-success" />
+        <button type="submit" class="btn">Join Chat</button>
       </form>
     </main>
   </div>
@@ -37,10 +37,5 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-/* Hier können spezifische Stile für diese Komponente definiert werden */
-</style>
-
 
 

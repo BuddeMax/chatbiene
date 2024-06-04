@@ -3,6 +3,7 @@
     <header class="chat-header">
       <h1>Chat</h1>
       <router-link to="/" class="btn">Leave Room</router-link>
+      <div class="server-ip">Server IP: {{ ipAddress }}</div>
     </header>
     <main class="chat-main">
       <div class="chat-sidebar">
@@ -22,8 +23,8 @@
     </main>
     <div class="chat-form-container">
       <form @submit.prevent="sendMessage">
-        <InputText v-model="message" type="text" placeholder="Enter Message" required autocomplete="off" />
-        <Button type="submit" icon="pi pi-send" class="p-button-success" />
+        <input v-model="message" type="text" placeholder="Enter Message" required autocomplete="off" />
+        <button class="btn"><i class="fas fa-paper-plane"></i> Send</button>
       </form>
     </div>
   </div>
@@ -40,6 +41,7 @@ export default {
       messages: [],
       users: [],
       roomName: '',
+      ipAddress: '',
     };
   },
   created() {
@@ -56,6 +58,10 @@ export default {
     this.socket.on('message', (message) => {
       this.messages.push(message);
       this.scrollToBottom();
+    });
+
+    this.socket.on('ipAddress', (ip) => {
+      this.ipAddress = ip;
     });
   },
   methods: {
@@ -74,9 +80,4 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-/* Hier können spezifische Stile für diese Komponente definiert werden */
-</style>
-
 
