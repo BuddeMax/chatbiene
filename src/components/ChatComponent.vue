@@ -1,14 +1,14 @@
 <template>
   <div class="chat-container">
     <header class="chat-header">
-      <h1>Chat</h1>
-      <router-link to="/" class="btn">Leave Room</router-link>
+      <h1>Chat Room: {{ roomName }}</h1>
+      <button @click="leaveRoom" class="btn">Leave Room</button>
       <div class="server-ip">Server IP: {{ ipAddress }}</div>
     </header>
     <main class="chat-main">
       <div class="chat-sidebar">
-        <h3><i class="fas fa-comments"></i> Room Name:</h3>
-        <h2>{{ roomName }}</h2>
+        <h3><i class="fas fa-comments"></i> Room Code:</h3>
+        <h2>{{ roomCode }}</h2>
         <h3><i class="fas fa-users"></i> Users</h3>
         <ul>
           <li v-for="user in users" :key="user.id">{{ user.username }}</li>
@@ -42,16 +42,23 @@ export default {
       users: [],
       roomName: '',
       ipAddress: '',
+      roomCode: ''
     };
   },
   created() {
-    const { username, room } = this.$route.query;
+    const { username, room, roomName, roomCode } = this.$route.query;
+    this.roomName = roomName || room; // Fallback to room code if roomName is not provided
+    this.roomCode = roomCode || room;
     this.socket = io();
 
     this.socket.emit('joinRoom', { username, room });
 
+    this.socket.on('roomData', ({ roomName, roomCode }) => {
+      this.roomName = roomName;
+      this.roomCode = roomCode;
+    });
+
     this.socket.on('roomUsers', ({ room, users }) => {
-      this.roomName = room;
       this.users = users;
     });
 
@@ -77,7 +84,14 @@ export default {
         chatMessages.scrollTop = chatMessages.scrollHeight;
       });
     },
-  },
+    leaveRoom() {
+      if (this.socket) {
+        this.socket.emit('leaveRoom');
+        this.socket.disconnect();
+      }
+      this.$router.push('/');
+    }
+  }
 };
 </script>
 

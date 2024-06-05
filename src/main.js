@@ -7,6 +7,7 @@ import 'primevue/resources/primevue.min.css'; // Core CSS
 import 'primeicons/primeicons.css'; // Icons
 import JoinComponent from './components/JoinComponent.vue';
 import ChatComponent from './components/ChatComponent.vue';
+import AdminComponent from './components/AdminComponent.vue';
 import './assets/style.css'; // Importiere die CSS-Datei
 
 // Komponenten
@@ -26,6 +27,7 @@ Vue.component('Message', Message);
 const routes = [
     { path: '/', component: JoinComponent },
     { path: '/chat', name: 'Chat', component: ChatComponent },
+    { path: '/admin', name: 'Admin', component: AdminComponent },
 ];
 
 const router = new VueRouter({
