@@ -1,0 +1,40 @@
+{
+  "orientation": "natural",
+  "background_color": "#001c30",
+  "display": "fullscreen",
+  "form_factor": "wide",
+  "icons": [
+    {
+      "src": "./img/icons/manifest-icon-192.maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./img/icons/manifest-icon-192.maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./img/icons/manifest-icon-512.maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./img/icons/manifest-icon-512.maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "name": "Chattbiene",
+  "scope": "/",
+  "short_name": "Chatbiene",
+  "start_url": "/",
+  "theme_color": "#001c30",
+  "description": "Chatbiene - Dein Chatbot für die Region",
+  "msTileColor": "#001c30"
+}
+
