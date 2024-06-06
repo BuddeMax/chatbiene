@@ -10,6 +10,8 @@ import ChatComponent from './components/ChatComponent.vue';
 import AdminComponent from './components/AdminComponent.vue';
 import LoginComponent from "@/components/LoginComponent.vue";
 import './assets/style.css'; // Importiere die CSS-Datei
+import io from 'socket.io-client';
+
 
 // Komponenten
 import Button from 'primevue/button';
@@ -39,9 +41,35 @@ const router = new VueRouter({
     routes,
 });
 
+const socket = io();
+
+socket.on('colorsUpdated', (colors) => {
+    const root = document.documentElement;
+    root.style.setProperty('--primary-color', colors.primaryColor);
+    root.style.setProperty('--secondary-color', colors.secondaryColor);
+    root.style.setProperty('--background-color', colors.backgroundColor);
+    root.style.setProperty('--text-color', colors.textColor);
+    root.style.setProperty('--btn-background-color', colors.btnBackgroundColor);
+    root.style.setProperty('--btn-hover-color', colors.btnHoverColor);
+    localStorage.setItem('colors', JSON.stringify(colors));
+});
+
 new Vue({
     render: (h) => h(App),
     router,
+    mounted() {
+        const savedColors = localStorage.getItem('colors');
+        if (savedColors) {
+            const colors = JSON.parse(savedColors);
+            const root = document.documentElement;
+            root.style.setProperty('--primary-color', colors.primaryColor);
+            root.style.setProperty('--secondary-color', colors.secondaryColor);
+            root.style.setProperty('--background-color', colors.backgroundColor);
+            root.style.setProperty('--text-color', colors.textColor);
+            root.style.setProperty('--btn-background-color', colors.btnBackgroundColor);
+            root.style.setProperty('--btn-hover-color', colors.btnHoverColor);
+        }
+    }
 }).$mount('#app');
 
 

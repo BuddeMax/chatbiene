@@ -48,6 +48,7 @@
           <label for="btn-hover-color">Button Hover Color:</label>
           <input type="color" id="btn-hover-color" v-model="colors.btnHoverColor" @input="updateColors" />
         </div>
+        <button class="btn-send-colors" @click="sendColors">Send Colors to All Users</button>
       </section>
     </main>
   </div>
@@ -57,9 +58,12 @@
 </template>
 
 <script>
+import io from 'socket.io-client';
+
 export default {
   data() {
     return {
+      socket: null,
       rooms: [],
       users: [],
       authenticated: false,
@@ -78,6 +82,7 @@ export default {
     this.checkAuthentication();
     this.fetchAdminData();
     this.loadColors();
+    this.socket = io();
   },
   methods: {
     checkAuthentication() {
@@ -125,6 +130,10 @@ export default {
       root.style.setProperty('--btn-hover-color', this.colors.btnHoverColor);
       localStorage.setItem('colors', JSON.stringify(this.colors));
     },
+    sendColors() {
+      this.updateColors();
+      this.socket.emit('updateColors', this.colors); // Senden Sie die Farben an alle Clients
+    },
     loadColors() {
       const savedColors = localStorage.getItem('colors');
       if (savedColors) {
@@ -138,4 +147,6 @@ export default {
   }
 };
 </script>
+
+
 

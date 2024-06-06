@@ -4,6 +4,7 @@
       <h1>Chat Room: {{ roomName }}</h1>
       <button @click="leaveRoom" class="btn">Leave Room</button>
       <div class="server-ip">Server IP: {{ ipAddress }}</div>
+      <canvas ref="qrCanvas" class="qr-code"></canvas> <!-- QR-Code Canvas -->
     </header>
     <main class="chat-main">
       <div class="chat-sidebar">
@@ -32,6 +33,7 @@
 
 <script>
 import io from 'socket.io-client';
+import QRCode from 'qrcode';
 
 export default {
   data() {
@@ -56,6 +58,7 @@ export default {
     this.socket.on('roomData', ({ roomName, roomCode }) => {
       this.roomName = roomName;
       this.roomCode = roomCode;
+      this.generateQRCode();
     });
 
     this.socket.on('roomUsers', ({ room, users }) => {
@@ -69,6 +72,7 @@ export default {
 
     this.socket.on('ipAddress', (ip) => {
       this.ipAddress = ip;
+      this.generateQRCode();
     });
 
     this.socket.on('roomClosed', () => {
@@ -95,6 +99,14 @@ export default {
         this.socket.close();
       }
       this.$router.push('/');
+    },
+    generateQRCode() {
+      if (this.ipAddress && this.roomCode) {
+        const url = `http://${this.ipAddress}:8080/?roomCode=${this.roomCode}`;
+        QRCode.toCanvas(this.$refs.qrCanvas, url, { width: 128, height: 128 }, (error) => {
+          if (error) console.error(error);
+        });
+      }
     }
   }
 };

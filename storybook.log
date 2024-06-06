@@ -1,0 +1,22 @@
+npm ERR! code ERESOLVE
+npm ERR! ERESOLVE unable to resolve dependency tree
+npm ERR! 
+npm ERR! While resolving: chatapp@1.0.0
+npm ERR! Found: vue@2.7.16
+npm ERR! node_modules/vue
+npm ERR!   vue@"^2.6.12" from the root project
+npm ERR! 
+npm ERR! Could not resolve dependency:
+npm ERR! peer vue@"^3.0.0" from @storybook/vue3@8.1.5
+npm ERR! node_modules/@storybook/vue3
+npm ERR!   dev @storybook/vue3@"*" from the root project
+npm ERR! 
+npm ERR! Fix the upstream dependency conflict, or retry
+npm ERR! this command with --force or --legacy-peer-deps
+npm ERR! to accept an incorrect (and potentially broken) dependency resolution.
+npm ERR! 
+npm ERR! 
+npm ERR! For a full report see:
+npm ERR! /Users/maxbudde/.npm/_logs/2024-06-04T13_00_19_445Z-eresolve-report.txt
+
+npm ERR! A complete log of this run can be found in: /Users/maxbudde/.npm/_logs/2024-06-04T13_00_19_445Z-debug-0.log

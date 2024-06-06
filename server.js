@@ -15,6 +15,8 @@ app.use(express.json());
 
 const botName = 'ChatCord Bot';
 
+const messages = {}; // Nachrichten im Speicher speichern
+
 function getIPAddress() {
     const interfaces = os.networkInterfaces();
     for (let devName in interfaces) {
@@ -36,6 +38,7 @@ app.post('/api/create-room', (req, res) => {
     const { roomName } = req.body;
     const roomCode = generateRoomCode();
     addRoom(roomCode, roomName);
+    messages[roomCode] = []; // Initialisieren Sie den Nachrichtenpuffer für den Raum
     res.json({ roomCode });
 });
 
@@ -46,7 +49,12 @@ app.post('/api/close-room', (req, res) => {
         io.to(user.id).emit('roomClosed');
     });
     closeRoom(roomCode);
+    delete messages[roomCode]; // Entfernen Sie die Nachrichten des geschlossenen Raums
     res.json({ success: true });
+});
+
+app.get('/api/messages', (req, res) => {
+    res.json(messages);
 });
 
 app.get('/api/admin-data', (req, res) => {
@@ -67,6 +75,11 @@ io.on('connection', (socket) => {
 
         socket.emit('roomData', { roomName, roomCode: room });
 
+        // Senden Sie die bisherigen Nachrichten an den neuen Benutzer
+        if (messages[room]) {
+            messages[room].forEach(message => socket.emit('message', message));
+        }
+
         socket.broadcast.to(user.room).emit('message', formatMessage(botName, `${user.username} has joined the chat`));
 
         io.to(user.room).emit('roomUsers', {
@@ -77,7 +90,14 @@ io.on('connection', (socket) => {
 
     socket.on('chatMessage', (msg) => {
         const user = getCurrentUser(socket.id);
-        io.to(user.room).emit('message', formatMessage(user.username, msg));
+        const message = formatMessage(user.username, msg);
+
+        // Speichern Sie die Nachricht im Speicher
+        if (messages[user.room]) {
+            messages[user.room].push(message);
+        }
+
+        io.to(user.room).emit('message', message);
     });
 
     socket.on('leaveRoom', () => {
@@ -102,6 +122,11 @@ io.on('connection', (socket) => {
                 users: getRoomUsers(user.room),
             });
         }
+    });
+
+    // Neue Route, um die Farben zu aktualisieren
+    socket.on('updateColors', (colors) => {
+        io.emit('colorsUpdated', colors); // Broadcast an alle verbundenen Clients
     });
 });
 

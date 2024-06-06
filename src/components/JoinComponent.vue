@@ -29,7 +29,7 @@
         </form>
       </div>
     </main>
-    <button class="admin-button" @click="goToAdmin">A</button>
+    <button class="btn btn-admin" @click="goToAdmin">Admin Dashboard</button>
   </div>
 </template>
 
@@ -40,7 +40,7 @@ export default {
       username: '',
       action: 'join',
       roomName: '',
-      roomCode: ''
+      roomCode: this.$route.query.roomCode || ''
     };
   },
   methods: {
@@ -58,17 +58,16 @@ export default {
         }
         const data = await response.json();
         console.log('Room created successfully:', data);
-        this.$router.push({ name: 'Chat', query: { username: this.username, room: data.roomCode, roomName: this.roomName, roomCode: data.roomCode } });
+        this.$router.push({ name: 'Chat', query: { username: this.username, room: data.roomCode } });
       } catch (error) {
         console.error('Error creating room:', error);
       }
     },
     joinRoom() {
-      // Assuming the room name is not available when joining, we use the room code for both parameters.
-      this.$router.push({ name: 'Chat', query: { username: this.username, room: this.roomCode, roomName: this.roomCode, roomCode: this.roomCode } });
+      this.$router.push({ name: 'Chat', query: { username: this.username, room: this.roomCode } });
     },
     goToAdmin() {
-      this.$router.push({ name: 'Login' });
+      this.$router.push({ name: 'Admin' });
     }
   }
 };
