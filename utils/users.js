@@ -50,6 +50,19 @@ function getRoomName(roomCode) {
     return rooms[roomCode] ? rooms[roomCode].name : null;
 }
 
+function closeRoom(roomCode) {
+    if (rooms[roomCode]) {
+        const roomUsers = rooms[roomCode].users;
+        roomUsers.forEach(user => {
+            const userIndex = users.findIndex(u => u.id === user.id);
+            if (userIndex !== -1) {
+                users.splice(userIndex, 1);
+            }
+        });
+        delete rooms[roomCode];
+    }
+}
+
 module.exports = {
     userJoin,
     getCurrentUser,
@@ -59,5 +72,7 @@ module.exports = {
     generateRoomCode,
     getAllRooms,
     getAllUsers,
-    getRoomName
+    getRoomName,
+    closeRoom
 };
+

@@ -70,6 +70,11 @@ export default {
     this.socket.on('ipAddress', (ip) => {
       this.ipAddress = ip;
     });
+
+    this.socket.on('roomClosed', () => {
+      alert('This room has been closed by the admin.');
+      this.leaveRoom();
+    });
   },
   methods: {
     sendMessage() {
@@ -87,11 +92,10 @@ export default {
     leaveRoom() {
       if (this.socket) {
         this.socket.emit('leaveRoom');
-        this.socket.disconnect();
+        this.socket.close();
       }
       this.$router.push('/');
     }
   }
 };
 </script>
-

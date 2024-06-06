@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import JoinComponent from '../components/JoinComponent.vue';
 import ChatComponent from '../components/ChatComponent.vue';
 import AdminComponent from '../components/AdminComponent.vue';
+import LoginComponent from "@/components/LoginComponent.vue";
 
 const routes = [
   {
@@ -15,9 +16,29 @@ const routes = [
     component: ChatComponent
   },
   {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+  {
     path: '/admin',
     name: 'Admin',
-    component: AdminComponent
+    component: Admin,
+    beforeEnter: (to, from, next) => {
+      if (localStorage.getItem('authenticated') === 'true') {
+        next();
+      } else {
+        next('/login');
+      }
+    }
+  },
+  {
+    path: '*',
+    redirect: '/login'
+  },
+  {
+    path: '/:catchAll(.*)',
+    redirect: '/'
   }
 ];
 
@@ -27,6 +48,3 @@ const router = createRouter({
 });
 
 export default router;
-
-
-

@@ -4,7 +4,7 @@ const http = require('http');
 const os = require('os');
 const socketio = require('socket.io');
 const formatMessage = require('./utils/messages');
-const { userJoin, getCurrentUser, userLeave, getRoomUsers, addRoom, generateRoomCode, getAllRooms, getAllUsers, getRoomName } = require('./utils/users');
+const { userJoin, getCurrentUser, userLeave, getRoomUsers, addRoom, generateRoomCode, getAllRooms, getAllUsers, getRoomName, closeRoom } = require('./utils/users');
 
 const app = express();
 const server = http.createServer(app);
@@ -37,6 +37,16 @@ app.post('/api/create-room', (req, res) => {
     const roomCode = generateRoomCode();
     addRoom(roomCode, roomName);
     res.json({ roomCode });
+});
+
+app.post('/api/close-room', (req, res) => {
+    const { roomCode } = req.body;
+    const roomUsers = getRoomUsers(roomCode);
+    roomUsers.forEach(user => {
+        io.to(user.id).emit('roomClosed');
+    });
+    closeRoom(roomCode);
+    res.json({ success: true });
 });
 
 app.get('/api/admin-data', (req, res) => {
