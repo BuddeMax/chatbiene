@@ -12,12 +12,10 @@ import LoginComponent from "@/components/LoginComponent.vue";
 import './assets/style.css'; // Importiere die CSS-Datei
 import io from 'socket.io-client';
 
-
 // Komponenten
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
-
 
 Vue.config.productionTip = false;
 
@@ -40,6 +38,17 @@ const router = new VueRouter({
     mode: 'history',
     routes,
 });
+
+// Entferne die Registrierung des Service-Workers, wenn du ihn nicht benötigst
+// if ('serviceWorker' in navigator) {
+//   navigator.serviceWorker.register('/service-worker.js')
+//     .then(registration => {
+//       console.log('Service Worker registered with scope:', registration.scope);
+//     })
+//     .catch(error => {
+//       console.log('Service Worker registration failed:', error);
+//     });
+// }
 
 const socket = io();
 
@@ -73,3 +82,14 @@ new Vue({
 }).$mount('#app');
 
 
+// main.js
+
+if ('serviceWorker' in navigator && !/Version\/[\d\.]+.*Safari/.test(navigator.userAgent)) {
+    navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+            console.log('Service Worker registered with scope:', registration.scope);
+        })
+        .catch(error => {
+            console.log('Service Worker registration failed:', error);
+        });
+}

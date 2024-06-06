@@ -5,7 +5,7 @@
       <nav>
         <button class="btn-third" @click="activeTab = 'users'" :class="{ active: activeTab === 'users' }">Users & Rooms</button>
         <button class="btn-third" @click="activeTab = 'colors'" :class="{ active: activeTab === 'colors' }">Colors</button>
-        <button class="btn-third" @click="goHome" >Back to Home</button>
+        <button class="btn-third" @click="goHome">Back to Home</button>
       </nav>
     </header>
     <main class="admin-main">
@@ -19,7 +19,10 @@
         </ul>
         <h2>Online Users</h2>
         <ul>
-          <li v-for="user in users" :key="user.id">{{ user.username }} (Room: {{ user.room }})</li>
+          <li v-for="user in users" :key="user.id">
+            {{ user.username }} (Room: {{ user.room }})
+            <button @click="removeUser(user.id)" class="btn-remove">Remove User</button>
+          </li>
         </ul>
       </section>
       <section v-if="activeTab === 'colors'">
@@ -120,6 +123,23 @@ export default {
         console.error(error);
       }
     },
+    async removeUser(userId) {
+      try {
+        const response = await fetch('/api/remove-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ userId })
+        });
+        if (!response.ok) {
+          throw new Error('Error removing user');
+        }
+        this.fetchAdminData(); // Refresh the data after removing the user
+      } catch (error) {
+        console.error(error);
+      }
+    },
     updateColors() {
       const root = document.documentElement;
       root.style.setProperty('--primary-color', this.colors.primaryColor);
@@ -147,6 +167,7 @@ export default {
   }
 };
 </script>
+
 
 
 

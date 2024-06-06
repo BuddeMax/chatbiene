@@ -67,7 +67,7 @@ export default {
       this.$router.push({ name: 'Chat', query: { username: this.username, room: this.roomCode } });
     },
     goToAdmin() {
-      this.$router.push({ name: 'Admin' });
+      this.$router.push({ name: 'Login' });
     }
   }
 };

@@ -63,6 +63,17 @@ function closeRoom(roomCode) {
     }
 }
 
+function removeUser(userId) {
+    const user = userLeave(userId);
+    if (user) {
+        const room = rooms[user.room];
+        if (room) {
+            room.users = room.users.filter(u => u.id !== userId);
+        }
+    }
+    return user;
+}
+
 module.exports = {
     userJoin,
     getCurrentUser,
@@ -73,6 +84,8 @@ module.exports = {
     getAllRooms,
     getAllUsers,
     getRoomName,
-    closeRoom
+    closeRoom,
+    removeUser
 };
+
 

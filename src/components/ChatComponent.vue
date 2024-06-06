@@ -79,6 +79,11 @@ export default {
       alert('This room has been closed by the admin.');
       this.leaveRoom();
     });
+
+    this.socket.on('userRemoved', () => {
+      alert('You have been removed from the room by the admin.');
+      this.leaveRoom();
+    });
   },
   methods: {
     sendMessage() {
@@ -111,3 +116,4 @@ export default {
   }
 };
 </script>
+

@@ -4,7 +4,7 @@ const http = require('http');
 const os = require('os');
 const socketio = require('socket.io');
 const formatMessage = require('./utils/messages');
-const { userJoin, getCurrentUser, userLeave, getRoomUsers, addRoom, generateRoomCode, getAllRooms, getAllUsers, getRoomName, closeRoom } = require('./utils/users');
+const { userJoin, getCurrentUser, userLeave, getRoomUsers, addRoom, generateRoomCode, getAllRooms, getAllUsers, getRoomName, closeRoom, removeUser } = require('./utils/users');
 
 const app = express();
 const server = http.createServer(app);
@@ -12,6 +12,15 @@ const io = socketio(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+
+// server.js
+
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+});
+
 
 const botName = 'ChatCord Bot';
 
@@ -51,6 +60,17 @@ app.post('/api/close-room', (req, res) => {
     closeRoom(roomCode);
     delete messages[roomCode]; // Entfernen Sie die Nachrichten des geschlossenen Raums
     res.json({ success: true });
+});
+
+app.post('/api/remove-user', (req, res) => {
+    const { userId } = req.body;
+    const user = removeUser(userId);
+    if (user) {
+        io.to(user.id).emit('userRemoved');
+        res.json({ success: true });
+    } else {
+        res.status(404).json({ error: 'User not found' });
+    }
 });
 
 app.get('/api/messages', (req, res) => {
