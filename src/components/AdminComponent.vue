@@ -15,6 +15,7 @@
           <li v-for="room in rooms" :key="room.code">
             {{ room.name }} (Code: {{ room.code }})
             <button @click="closeRoom(room.code)" class="btn-close">Close Room</button>
+            <button @click="downloadCsv(room.code)" class="btn-download">Download CSV</button>
           </li>
         </ul>
         <h2>Online Users</h2>
@@ -163,6 +164,10 @@ export default {
     },
     goHome() {
       this.$router.push('/');
+    },
+    downloadCsv(roomCode) {
+      const url = `/api/download-csv/${roomCode}`;
+      window.open(url, '_blank');
     }
   }
 };

@@ -223,7 +223,7 @@ a {
     background: #fff;
     padding: var(--padding);
     border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow);
+    box-shadow: var (--box-shadow);
     text-align: center;
 }
 
@@ -276,6 +276,14 @@ a {
 
     .chat-sidebar {
         display: none;
+    }
+
+    .chat-header .qr-code {
+        display: none;
+    }
+
+    .chat-header .server-ip {
+        display: block;
     }
 }
 
@@ -394,8 +402,3 @@ a {
     margin-top: 20px;
     color: var(--error-color);
 }
-
-
-
-
-
