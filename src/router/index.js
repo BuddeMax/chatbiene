@@ -25,7 +25,7 @@ const routes = [
     name: 'Admin',
     component: Admin,
     beforeEnter: (to, from, next) => {
-      if (localStorage.getItem('authenticated') === 'true') {
+      if (localStorage.getItem('authenticatedForChatbiene') === 'true') {
         next();
       } else {
         next('/login');

@@ -1,12 +1,13 @@
 {
-  "name": "chatapp",
+  "name": "chatbiene",
   "version": "1.0.0",
   "description": "Realtime chat application with Vue and Socket.io",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "serve": "vue-cli-service serve"
+    "serve": "vue-cli-service serve",
+    "start:both": "concurrently \"npm run dev\" \"npm run serve\""
   },
   "author": "Your Name",
   "license": "MIT",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@vue/cli-service": "^5.0.8",
-    "nodemon": "^2.0.6"
+    "nodemon": "^2.0.6",
+    "concurrently": "^6.5.1"
   }
 }

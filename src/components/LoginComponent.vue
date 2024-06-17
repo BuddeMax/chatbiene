@@ -22,7 +22,7 @@ export default {
     checkPassword() {
       const correctPassword = 'yourpassword'; // Set your password here
       if (this.password === correctPassword) {
-        localStorage.setItem('authenticated', true);
+        localStorage.setItem('authenticatedForChatbiene', true);
         this.$router.push('/admin');
       } else {
         this.error = 'Incorrect password';

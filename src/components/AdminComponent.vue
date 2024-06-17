@@ -90,7 +90,7 @@ export default {
   },
   methods: {
     checkAuthentication() {
-      this.authenticated = localStorage.getItem('authenticated') === 'true';
+      this.authenticated = localStorage.getItem('authenticatedForChatbiene') === 'true';
     },
     async fetchAdminData() {
       if (this.authenticated) {

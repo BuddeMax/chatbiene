@@ -1,5 +1,6 @@
 module.exports = {
   devServer: {
+    allowedHosts: "all",
     proxy: {
       '/socket.io': {
         target: 'http://localhost:3000',
@@ -16,4 +17,3 @@ module.exports = {
     },
   },
 };
-
