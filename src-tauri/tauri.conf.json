@@ -17,18 +17,6 @@
     "bundle": {
       "active": true,
       "category": "DeveloperTool",
-      "copyright": "",
-      "deb": {
-        "depends": []
-      },
-      "externalBin": [],
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
       "identifier": "com.chatbiene.app",
       "longDescription": "Realtime chat application with Vue and Socket.io",
       "macOS": {
@@ -38,9 +26,9 @@
         "providerShortName": null,
         "signingIdentity": null
       },
-      "resources": [],
+      "resources": ["../server.js"],
       "shortDescription": "A realtime chat application",
-      "targets": ["all"],
+      "targets": ["dmg"],
       "windows": {
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",
@@ -64,3 +52,7 @@
     ]
   }
 }
+
+
+
+
