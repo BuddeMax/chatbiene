@@ -167,8 +167,6 @@ io.on('connection', (socket) => {
 
         socket.emit('roomData', { roomName, roomCode: room });
 
-
-
         socket.broadcast.to(user.room).emit('message', formatMessage(botName, `${user.username} has joined the chat`));
 
         io.to(user.room).emit('roomUsers', {
@@ -187,6 +185,12 @@ io.on('connection', (socket) => {
         }
 
         io.to(user.room).emit('message', message);
+
+        // Push-Benachrichtigung an den Client senden
+        io.to(user.room).emit('pushNotification', {
+            title: `Message from ${user.username}`,
+            body: msg,
+        });
     });
 
     socket.on('leaveRoom', () => {

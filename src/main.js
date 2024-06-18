@@ -41,13 +41,13 @@ const router = new VueRouter({
 
 // Entferne die Registrierung des Service-Workers, wenn du ihn nicht benötigst
 // if ('serviceWorker' in navigator) {
-//   navigator.serviceWorker.register('/service-worker.js')
-//     .then(registration => {
-//       console.log('Service Worker registered with scope:', registration.scope);
-//     })
-//     .catch(error => {
-//       console.log('Service Worker registration failed:', error);
-//     });
+// navigator.serviceWorker.register('/service-worker.js')
+// .then(registration => {
+// console.log('Service Worker registered with scope:', registration.scope);
+// })
+// .catch(error => {
+// console.log('Service Worker registration failed:', error);
+// });
 // }
 
 const socket = io();
@@ -81,15 +81,36 @@ new Vue({
     }
 }).$mount('#app');
 
+// Überprüfen Sie, ob der Browser Service Workers und die Push API unterstützt
+if ('serviceWorker' in navigator && 'PushManager' in window) {
+    console.log('Service Worker and Push is supported');
 
-// main.js
 
-if ('serviceWorker' in navigator && !/Version\/[\d\.]+.*Safari/.test(navigator.userAgent)) {
-    navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => {
-            console.log('Service Worker registered with scope:', registration.scope);
+// Registrieren Sie den Service Worker
+    navigator.serviceWorker.register('service-worker.js')
+        .then(function(swReg) {
+            console.log('Service Worker is registered', swReg);
+
+            // Initialisieren Sie eine Variable für den Service Worker Registration
+            let serviceWorkerRegistration = swReg;
+
+            // Fragen Sie den Benutzer um Erlaubnis für Push-Benachrichtigungen
+            Notification.requestPermission(function(result) {
+                if (result === 'granted') {
+                    // Wenn die Erlaubnis erteilt wurde, abonnieren Sie den Benutzer für Push-Benachrichtigungen
+                    serviceWorkerRegistration.pushManager.subscribe({ userVisibleOnly: true })
+                        .then(function(subscription) {
+                            console.log('User is subscribed:', subscription);
+                        })
+                        .catch(function(error) {
+                            console.error('Failed to subscribe the user: ', error);
+                        });
+                }
+            });
         })
-        .catch(error => {
-            console.log('Service Worker registration failed:', error);
+        .catch(function(error) {
+            console.error('Service Worker Error', error);
         });
+} else {
+    console.warn('Push messaging is not supported');
 }

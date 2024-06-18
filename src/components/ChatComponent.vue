@@ -66,8 +66,28 @@ export default {
     });
 
     this.socket.on('message', (message) => {
+      console.log('New message received:', message); // Debugging
       this.messages.push(message);
+
+      // Überprüfen, ob die Nachricht nicht vom Bot stammt
+      if (message.username !== 'ChatCord Bot') {
+        this.showNotification(message.username, { body: message.text });
+      }
+
       this.scrollToBottom();
+    });
+
+    this.socket.on('pushNotification', (notification) => {
+      // Send notification to Service Worker
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        navigator.serviceWorker.ready.then(function(swReg) {
+          swReg.showNotification(notification.title, {
+            body: notification.body,
+            tag: 'chat-message',
+            renotify: true
+          });
+        });
+      }
     });
 
     this.socket.on('ipAddress', (ip) => {
@@ -112,8 +132,38 @@ export default {
           if (error) console.error(error);
         });
       }
+    },
+    askNotificationPermission() {
+      if (!('Notification' in window)) {
+        console.error('This browser does not support desktop notification');
+        alert('This browser does not support desktop notification');
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(function (permission) {
+          if (permission === 'granted') {
+            console.log('Notification permission granted.');
+          } else {
+            console.log('Notification permission denied.');
+          }
+        });
+      }
+    },
+    showNotification(title, options) {
+      if (Notification.permission === 'granted') {
+        const notification = new Notification(title, options);
+        notification.onclick = function (event) {
+          event.preventDefault(); // Prevent the browser from focusing the Notification's tab
+          window.focus();
+        };
+      } else {
+        console.log('Notification permission not granted.');
+      }
     }
+  },
+  mounted() {
+    this.askNotificationPermission();
   }
 };
 </script>
+
+
 
