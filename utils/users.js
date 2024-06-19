@@ -32,6 +32,7 @@ function userLeave(id) {
         }
         return user;
     }
+    return null;
 }
 
 function getRoomUsers(room) {
@@ -87,5 +88,4 @@ module.exports = {
     closeRoom,
     removeUser
 };
-
 

@@ -3,7 +3,7 @@
     <header class="chat-header">
       <h1>Chat Room: {{ roomName }}</h1>
       <button @click="leaveRoom" class="btn">Leave Room</button>
-      <div class="server-ip">Server IP: {{ ipAddress }}</div>
+      <div class="server-ip">Server IP: {{ ipAddress }}:8080</div>
       <canvas ref="qrCanvas" class="qr-code"></canvas> <!-- QR-Code Canvas -->
     </header>
     <main class="chat-main">
@@ -30,7 +30,6 @@
     </div>
   </div>
 </template>
-
 <script>
 import io from 'socket.io-client';
 import QRCode from 'qrcode';
@@ -44,13 +43,15 @@ export default {
       users: [],
       roomName: '',
       ipAddress: '',
-      roomCode: ''
+      roomCode: '',
+      username: '', // Benutzername hinzufügen
     };
   },
   created() {
     const { username, room, roomName, roomCode } = this.$route.query;
     this.roomName = roomName || room; // Fallback to room code if roomName is not provided
     this.roomCode = roomCode || room;
+    this.username = username; // Benutzername setzen
     this.socket = io();
 
     this.socket.emit('joinRoom', { username, room });
@@ -69,8 +70,8 @@ export default {
       console.log('New message received:', message); // Debugging
       this.messages.push(message);
 
-      // Überprüfen, ob die Nachricht nicht vom Bot stammt
-      if (message.username !== 'ChatCord Bot') {
+      // Überprüfen, ob die Nachricht nicht vom Bot und nicht vom aktuellen Benutzer stammt
+      if (message.username !== 'ChatCord Bot' && message.username !== this.username) {
         this.showNotification(message.username, { body: message.text });
       }
 
@@ -78,15 +79,18 @@ export default {
     });
 
     this.socket.on('pushNotification', (notification) => {
-      // Send notification to Service Worker
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        navigator.serviceWorker.ready.then(function(swReg) {
-          swReg.showNotification(notification.title, {
-            body: notification.body,
-            tag: 'chat-message',
-            renotify: true
+      // Überprüfen, ob die Benachrichtigung nicht vom aktuellen Benutzer stammt
+      if (notification.title !== `Message from ${this.username}`) {
+        // Send notification to Service Worker
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+          navigator.serviceWorker.ready.then(function(swReg) {
+            swReg.showNotification(notification.title, {
+              body: notification.body,
+              tag: 'chat-message',
+              renotify: true
+            });
           });
-        });
+        }
       }
     });
 
@@ -164,6 +168,3 @@ export default {
   }
 };
 </script>
-
-
-

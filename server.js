@@ -186,11 +186,6 @@ io.on('connection', (socket) => {
 
         io.to(user.room).emit('message', message);
 
-        // Push-Benachrichtigung an den Client senden
-        io.to(user.room).emit('pushNotification', {
-            title: `Message from ${user.username}`,
-            body: msg,
-        });
     });
 
     socket.on('leaveRoom', () => {

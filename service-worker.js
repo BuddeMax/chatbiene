@@ -7,11 +7,11 @@ workbox.routing.registerRoute(
 );
 
 // Push-Benachrichtigungen
-self.addEventListener('push', function (event) {
+self.addEventListener('push', function(event) {
     const data = event.data ? event.data.json() : {};
 
-    // Überprüfen, ob die Nachricht nicht vom Bot stammt
-    if (data.username !== 'ChatCord Bot') {
+    // Überprüfen, ob die Nachricht nicht vom Bot stammt und keine Benachrichtigung für diese Nachricht bereits gesendet wurde
+    if (data.username !== 'ChatCord Bot' && !self.notificationSent) {
         const options = {
             body: data.body || 'Push message no payload',
             icon: 'public/img/icons/icon-256.png', // Pfad zu Ihrem Logo
@@ -20,8 +20,9 @@ self.addEventListener('push', function (event) {
         };
 
         event.waitUntil(
-            self.registration.showNotification(data.title || 'New Message', options)
+            self.registration.showNotification(data.title || 'New Message', options).then(() => {
+                self.notificationSent = true; // Markieren Sie die Benachrichtigung als gesendet
+            })
         );
     }
 });
-

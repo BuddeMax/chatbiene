@@ -29,7 +29,7 @@
         </form>
       </div>
     </main>
-    <button class="btn btn-admin" @click="goToAdmin">Admin Dashboard</button>
+    <button class="admin-button" @click="goToAdmin">Admin Dashboard</button>
   </div>
 </template>
 
@@ -76,7 +76,8 @@ export default {
 <style scoped>
 .admin-button {
   position: fixed;
-  right: 0;
+  left: 0;
   bottom: 0;
+  opacity: 0;
 }
 </style>
