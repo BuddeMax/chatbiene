@@ -3,6 +3,10 @@ const express = require('express');
 const http = require('http');
 const os = require('os');
 const socketio = require('socket.io');
+const crypto = require('crypto');
+const fs = require('fs');
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const moment = require('moment');
 const formatMessage = require('./utils/messages');
 const {
     userJoin,
@@ -17,10 +21,6 @@ const {
     closeRoom,
     removeUser
 } = require('./utils/users');
-const crypto = require('crypto');
-const fs = require('fs');
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;
-const moment = require('moment');
 
 const app = express();
 const server = http.createServer(app);
@@ -31,6 +31,20 @@ app.use(express.json());
 
 const botName = 'ChatCord Bot';
 const messages = {}; // Nachrichten im Speicher speichern
+
+// Maps to store the count of users, rooms, and messages over time
+const userCountMap = new Map();
+const roomCountMap = new Map();
+const messageCountMap = new Map();
+
+function updateCountMap(map, key) {
+    const currentCount = map.get(key) || 0;
+    map.set(key, currentCount + 1);
+}
+
+function getCurrentTimeKey() {
+    return moment().format('HH:mm');
+}
 
 function getIPAddress() {
     const interfaces = os.networkInterfaces();
@@ -113,12 +127,24 @@ app.get('/api/download-csv/:roomCode', async (req, res) => {
     }
 });
 
+// API endpoint to fetch statistics
+app.get('/api/statistics', (req, res) => {
+    res.json({
+        userCountMap: Array.from(userCountMap.entries()),
+        roomCountMap: Array.from(roomCountMap.entries()),
+        messageCountMap: Array.from(messageCountMap.entries()),
+    });
+});
+
 app.post('/api/create-room', (req, res) => {
     const { roomName } = req.body;
     const roomCode = generateRoomCode();
     addRoom(roomCode, roomName);
     messages[roomCode] = []; // Initialisieren Sie den Nachrichtenpuffer für den Raum
     res.json({ roomCode });
+
+    const timeKey = getCurrentTimeKey();
+    updateCountMap(roomCountMap, timeKey);
 });
 
 app.post('/api/close-room', (req, res) => {
@@ -162,6 +188,9 @@ io.on('connection', (socket) => {
         const roomName = getRoomName(room);
         socket.join(user.room);
 
+        const timeKey = getCurrentTimeKey();
+        updateCountMap(userCountMap, timeKey);
+
         socket.emit('message', formatMessage(botName, 'Welcome to ChatCord!'));
         socket.emit('ipAddress', ipAddress);
 
@@ -182,10 +211,14 @@ io.on('connection', (socket) => {
         // Speichern Sie die Nachricht im Speicher
         if (messages[user.room]) {
             messages[user.room].push(message);
+        } else {
+            messages[user.room] = [message];
         }
 
-        io.to(user.room).emit('message', message);
+        const timeKey = getCurrentTimeKey();
+        updateCountMap(messageCountMap, timeKey);
 
+        io.to(user.room).emit('message', message);
     });
 
     socket.on('leaveRoom', () => {

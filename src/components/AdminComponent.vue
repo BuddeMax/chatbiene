@@ -5,6 +5,7 @@
       <nav>
         <button class="btn-secondary" @click="activeTab = 'users'" :class="{ active: activeTab === 'users' }">Users & Rooms</button>
         <button class="btn-secondary" @click="activeTab = 'colors'" :class="{ active: activeTab === 'colors' }">Colors</button>
+        <button class="btn-secondary" @click="activeTab = 'statistics'" :class="{ active: activeTab === 'statistics' }">Statistics</button>
         <button class="btn-secondary" @click="goHome">Back to Home</button>
       </nav>
     </header>
@@ -50,6 +51,18 @@
           </div>
         </div>
       </section>
+      <section v-if="activeTab === 'statistics'">
+        <h2>Statistics</h2>
+        <div class="chart-container">
+          <canvas id="userChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="roomChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="messageChart"></canvas>
+        </div>
+      </section>
     </main>
   </div>
   <div v-else>
@@ -57,9 +70,9 @@
   </div>
 </template>
 
-
 <script>
 import io from 'socket.io-client';
+import Chart from 'chart.js/auto';
 
 export default {
   data() {
@@ -67,6 +80,7 @@ export default {
       socket: null,
       rooms: [],
       users: [],
+      messages: [],
       authenticated: false,
       activeTab: 'users',
       colors: {
@@ -74,14 +88,30 @@ export default {
         secondaryColor: '#a3d2ca',
         backgroundColor: '#f4f4f9',
         textColor: '#2b2d42'
-      }
+      },
+      userCountMap: new Map(),
+      roomCountMap: new Map(),
+      messageCountMap: new Map(),
+      userChart: null,
+      roomChart: null,
+      messageChart: null,
     };
   },
   created() {
     this.checkAuthentication();
     this.fetchAdminData();
+    this.fetchStatistics();
     this.loadColors();
     this.socket = io();
+  },
+  watch: {
+    activeTab(newTab) {
+      if (newTab === 'statistics') {
+        this.$nextTick(() => {
+          this.renderCharts();
+        });
+      }
+    }
   },
   methods: {
     checkAuthentication() {
@@ -97,6 +127,26 @@ export default {
           const data = await response.json();
           this.rooms = data.rooms;
           this.users = data.users;
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    },
+    async fetchStatistics() {
+      if (this.authenticated) {
+        try {
+          const response = await fetch('/api/statistics');
+          if (!response.ok) {
+            throw new Error('Error fetching statistics');
+          }
+          const data = await response.json();
+          console.log('Fetched Statistics:', data);
+          this.userCountMap = new Map(data.userCountMap);
+          this.roomCountMap = new Map(data.roomCountMap);
+          this.messageCountMap = new Map(data.messageCountMap);
+          console.log('User Count Map:', this.userCountMap);
+          console.log('Room Count Map:', this.roomCountMap);
+          console.log('Message Count Map:', this.messageCountMap);
         } catch (error) {
           console.error(error);
         }
@@ -146,7 +196,7 @@ export default {
     },
     sendColors() {
       this.updateColors();
-      this.socket.emit('updateColors', this.colors); // Senden Sie die Farben an alle Clients
+      this.socket.emit('updateColors', this.colors); // Send colors to all clients
     },
     loadColors() {
       const savedColors = localStorage.getItem('colors');
@@ -161,12 +211,85 @@ export default {
     downloadCsv(roomCode) {
       const url = `/api/download-csv/${roomCode}`;
       window.open(url, '_blank');
+    },
+    renderCharts() {
+      const userCanvas = document.getElementById('userChart');
+      const roomCanvas = document.getElementById('roomChart');
+      const messageCanvas = document.getElementById('messageChart');
+
+      if (userCanvas && roomCanvas && messageCanvas) {
+        const ctxUser = userCanvas.getContext('2d');
+        const ctxRoom = roomCanvas.getContext('2d');
+        const ctxMessage = messageCanvas.getContext('2d');
+
+        // Render User Chart
+        const userChartData = {
+          labels: Array.from(this.userCountMap.keys()),
+          datasets: [{
+            label: 'User Count',
+            data: Array.from(this.userCountMap.values()),
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        };
+        if (this.userChart) {
+          this.userChart.data = userChartData;
+          this.userChart.update();
+        } else {
+          this.userChart = new Chart(ctxUser, {
+            type: 'line',
+            data: userChartData
+          });
+        }
+
+        // Render Room Chart
+        const roomChartData = {
+          labels: Array.from(this.roomCountMap.keys()),
+          datasets: [{
+            label: 'Room Count',
+            data: Array.from(this.roomCountMap.values()),
+            backgroundColor: 'rgba(255, 206, 86, 0.2)',
+            borderColor: 'rgba(255, 206, 86, 1)',
+            borderWidth: 1
+          }]
+        };
+        if (this.roomChart) {
+          this.roomChart.data = roomChartData;
+          this.roomChart.update();
+        } else {
+          this.roomChart = new Chart(ctxRoom, {
+            type: 'line',
+            data: roomChartData
+          });
+        }
+
+        // Render Message Chart
+        const messageChartData = {
+          labels: Array.from(this.messageCountMap.keys()),
+          datasets: [{
+            label: 'Message Count',
+            data: Array.from(this.messageCountMap.values()),
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+          }]
+        };
+        if (this.messageChart) {
+          this.messageChart.data = messageChartData;
+          this.messageChart.update();
+        } else {
+          this.messageChart = new Chart(ctxMessage, {
+            type: 'line',
+            data: messageChartData
+          });
+        }
+      } else {
+        console.error('One or more chart canvas elements are not found.');
+      }
     }
   }
 };
 </script>
-
-
-
 
 
