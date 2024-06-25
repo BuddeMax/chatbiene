@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const moment = require('moment');
+const CryptoJS = require('crypto-js');
 const formatMessage = require('./utils/messages');
 const {
     userJoin,
@@ -31,6 +32,7 @@ app.use(express.json());
 
 const botName = 'ChatCord Bot';
 const messages = {}; // Nachrichten im Speicher speichern
+const encryptionKey = 'ffdedd009668c3679b85433cc4c99d87194f27a484abbc56fd970188053e3fa5'; // Replace with a secure key
 
 // Maps to store the count of users, rooms, and messages over time
 const userCountMap = new Map();
@@ -69,7 +71,7 @@ function hashUsername(username) {
 }
 
 // Ensure the directory for CSV files exists
-const csvDirectory = '/Users/maxbudde/chatdata';
+const csvDirectory = path.join(os.homedir(), 'chatdata');
 if (!fs.existsSync(csvDirectory)) {
     fs.mkdirSync(csvDirectory, { recursive: true });
 }
@@ -191,12 +193,17 @@ io.on('connection', (socket) => {
         const timeKey = getCurrentTimeKey();
         updateCountMap(userCountMap, timeKey);
 
-        socket.emit('message', formatMessage(botName, 'Welcome to ChatCord!'));
+        let welcomeMessage = 'Welcome to ChatCord!';
+        let encryptedWelcomeMessage = encryptMessage(welcomeMessage);
+        socket.emit('message', formatMessage(botName, encryptedWelcomeMessage));
+
         socket.emit('ipAddress', ipAddress);
 
         socket.emit('roomData', { roomName, roomCode: room });
 
-        socket.broadcast.to(user.room).emit('message', formatMessage(botName, `${user.username} has joined the chat`));
+        let joinMessage = `${user.username} has joined the chat`;
+        let encryptedJoinMessage = encryptMessage(joinMessage);
+        socket.broadcast.to(user.room).emit('message', formatMessage(botName, encryptedJoinMessage));
 
         io.to(user.room).emit('roomUsers', {
             room: user.room,
@@ -204,9 +211,10 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('chatMessage', (msg) => {
+    socket.on('chatMessage', ({ text, sender }) => {
         const user = getCurrentUser(socket.id);
-        const message = formatMessage(user.username, msg);
+        const decryptedMsg = decryptMessage(text);
+        const message = formatMessage(user.username, decryptedMsg);
 
         // Speichern Sie die Nachricht im Speicher
         if (messages[user.room]) {
@@ -218,14 +226,26 @@ io.on('connection', (socket) => {
         const timeKey = getCurrentTimeKey();
         updateCountMap(messageCountMap, timeKey);
 
-        io.to(user.room).emit('message', message);
+        const encryptedMessage = encryptMessage(message.text);
+        io.to(user.room).emit('message', { ...message, text: encryptedMessage });
+
+        // Send push notification to all other users in the room
+        socket.broadcast.to(user.room).emit('pushNotification', {
+            title: `Message from ${user.username}`,
+            body: decryptedMsg,
+            sender: user.username
+        });
     });
 
     socket.on('leaveRoom', () => {
         const user = getCurrentUser(socket.id);
         if (user) {
             userLeave(socket.id);
-            io.to(user.room).emit('message', formatMessage(botName, `${user.username} has left the chat`));
+
+            let leaveMessage = `${user.username} has left the chat`;
+            let encryptedLeaveMessage = encryptMessage(leaveMessage);
+            io.to(user.room).emit('message', formatMessage(botName, encryptedLeaveMessage));
+
             io.to(user.room).emit('roomUsers', {
                 room: user.room,
                 users: getRoomUsers(user.room),
@@ -237,7 +257,10 @@ io.on('connection', (socket) => {
         const user = getCurrentUser(socket.id);
         if (user) {
             userLeave(socket.id);
-            io.to(user.room).emit('message', formatMessage(botName, `${user.username} has left the chat`));
+            let leaveMessage = `${user.username} has left the chat`;
+            let encryptedLeaveMessage = encryptMessage(leaveMessage);
+            io.to(user.room).emit('message', formatMessage(botName, encryptedLeaveMessage));
+
             io.to(user.room).emit('roomUsers', {
                 room: user.room,
                 users: getRoomUsers(user.room),
@@ -253,3 +276,13 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+function encryptMessage(message) {
+    return CryptoJS.AES.encrypt(message, encryptionKey).toString();
+}
+
+function decryptMessage(cipherText) {
+    const bytes = CryptoJS.AES.decrypt(cipherText, encryptionKey);
+    return bytes.toString(CryptoJS.enc.Utf8);
+}
+

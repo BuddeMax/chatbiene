@@ -18,7 +18,7 @@
       <div class="chat-messages">
         <div v-for="message in messages" :key="message.time" class="message">
           <p class="meta">{{ message.username }} <span>{{ message.time }}</span></p>
-          <p class="text">{{ message.text }}</p>
+          <p class="text">{{ decryptMessage(message.text) }}</p>
         </div>
       </div>
     </main>
@@ -30,9 +30,11 @@
     </div>
   </div>
 </template>
+
 <script>
 import io from 'socket.io-client';
 import QRCode from 'qrcode';
+import CryptoJS from 'crypto-js';
 
 export default {
   data() {
@@ -44,14 +46,15 @@ export default {
       roomName: '',
       ipAddress: '',
       roomCode: '',
-      username: '', // Benutzername hinzufügen
+      username: '',
+      encryptionKey: 'ffdedd009668c3679b85433cc4c99d87194f27a484abbc56fd970188053e3fa5' // Replace with a secure key
     };
   },
   created() {
     const { username, room, roomName, roomCode } = this.$route.query;
-    this.roomName = roomName || room; // Fallback to room code if roomName is not provided
+    this.roomName = roomName || room;
     this.roomCode = roomCode || room;
-    this.username = username; // Benutzername setzen
+    this.username = username;
     this.socket = io();
 
     this.socket.emit('joinRoom', { username, room });
@@ -67,21 +70,15 @@ export default {
     });
 
     this.socket.on('message', (message) => {
-      console.log('New message received:', message); // Debugging
       this.messages.push(message);
-
-      // Überprüfen, ob die Nachricht nicht vom Bot und nicht vom aktuellen Benutzer stammt
       if (message.username !== 'ChatCord Bot' && message.username !== this.username) {
-        this.showNotification(message.username, { body: message.text });
+        this.showNotification(message.username, { body: this.decryptMessage(message.text) });
       }
-
       this.scrollToBottom();
     });
 
     this.socket.on('pushNotification', (notification) => {
-      // Überprüfen, ob die Benachrichtigung nicht vom aktuellen Benutzer stammt
-      if (notification.title !== `Message from ${this.username}`) {
-        // Send notification to Service Worker
+      if (notification.sender !== this.username) {
         if ('serviceWorker' in navigator && 'PushManager' in window) {
           navigator.serviceWorker.ready.then(function(swReg) {
             swReg.showNotification(notification.title, {
@@ -112,9 +109,17 @@ export default {
   methods: {
     sendMessage() {
       if (this.message.trim()) {
-        this.socket.emit('chatMessage', this.message);
+        const encryptedMessage = this.encryptMessage(this.message);
+        this.socket.emit('chatMessage', { text: encryptedMessage, sender: this.username });
         this.message = '';
       }
+    },
+    encryptMessage(message) {
+      return CryptoJS.AES.encrypt(message, this.encryptionKey).toString();
+    },
+    decryptMessage(cipherText) {
+      const bytes = CryptoJS.AES.decrypt(cipherText, this.encryptionKey);
+      return bytes.toString(CryptoJS.enc.Utf8);
     },
     scrollToBottom() {
       this.$nextTick(() => {
@@ -155,7 +160,7 @@ export default {
       if (Notification.permission === 'granted') {
         const notification = new Notification(title, options);
         notification.onclick = function (event) {
-          event.preventDefault(); // Prevent the browser from focusing the Notification's tab
+          event.preventDefault();
           window.focus();
         };
       } else {
@@ -168,3 +173,4 @@ export default {
   }
 };
 </script>
+
