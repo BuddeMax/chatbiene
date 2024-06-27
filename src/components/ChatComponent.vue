@@ -71,23 +71,14 @@ export default {
 
     this.socket.on('message', (message) => {
       this.messages.push(message);
-      if (message.username !== 'ChatCord Bot' && message.username !== this.username) {
-        this.showNotification(message.username, { body: this.decryptMessage(message.text) });
+      if (message.username !== 'ChatCord Bot') {
+        this.scrollToBottom();
       }
-      this.scrollToBottom();
     });
 
     this.socket.on('pushNotification', (notification) => {
       if (notification.sender !== this.username) {
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-          navigator.serviceWorker.ready.then(function(swReg) {
-            swReg.showNotification(notification.title, {
-              body: notification.body,
-              tag: 'chat-message',
-              renotify: true
-            });
-          });
-        }
+        this.showNotification(notification.title, { body: notification.body });
       }
     });
 
@@ -105,6 +96,8 @@ export default {
       alert('You have been removed from the room by the admin.');
       this.leaveRoom();
     });
+
+    this.askNotificationPermission(); // Ask for notification permission on created
   },
   methods: {
     sendMessage() {
@@ -146,14 +139,22 @@ export default {
       if (!('Notification' in window)) {
         console.error('This browser does not support desktop notification');
         alert('This browser does not support desktop notification');
+        this.socket.emit('notificationSupport', { notificationSupported: false });
+      } else if (Notification.permission === 'granted') {
+        console.log('Notification permission granted.');
+        this.socket.emit('notificationSupport', { notificationSupported: true });
       } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then(function (permission) {
+        Notification.requestPermission().then((permission) => {
           if (permission === 'granted') {
             console.log('Notification permission granted.');
+            this.socket.emit('notificationSupport', { notificationSupported: true });
           } else {
             console.log('Notification permission denied.');
+            this.socket.emit('notificationSupport', { notificationSupported: false });
           }
         });
+      } else {
+        this.socket.emit('notificationSupport', { notificationSupported: false });
       }
     },
     showNotification(title, options) {
@@ -167,10 +168,6 @@ export default {
         console.log('Notification permission not granted.');
       }
     }
-  },
-  mounted() {
-    this.askNotificationPermission();
   }
 };
 </script>
-

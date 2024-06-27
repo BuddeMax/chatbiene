@@ -31,7 +31,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 const botName = 'ChatCord Bot';
-const messages = {}; // Nachrichten im Speicher speichern
+const messages = {}; // Store messages in memory
 const encryptionKey = 'ffdedd009668c3679b85433cc4c99d87194f27a484abbc56fd970188053e3fa5'; // Replace with a secure key
 
 // Maps to store the count of users, rooms, and messages over time
@@ -142,7 +142,7 @@ app.post('/api/create-room', (req, res) => {
     const { roomName } = req.body;
     const roomCode = generateRoomCode();
     addRoom(roomCode, roomName);
-    messages[roomCode] = []; // Initialisieren Sie den Nachrichtenpuffer für den Raum
+    messages[roomCode] = []; // Initialize message buffer for the room
     res.json({ roomCode });
 
     const timeKey = getCurrentTimeKey();
@@ -158,7 +158,7 @@ app.post('/api/close-room', (req, res) => {
     });
     closeRoom(roomCode);
     writeMessagesToCsv(roomName, roomCode, messages[roomCode]); // Write messages to CSV on room close
-    delete messages[roomCode]; // Entfernen Sie die Nachrichten des geschlossenen Raums
+    delete messages[roomCode]; // Remove messages of the closed room
     res.json({ success: true });
 });
 
@@ -183,8 +183,17 @@ app.get('/api/admin-data', (req, res) => {
         users: getAllUsers()
     });
 });
+const usersWithNotificationSupport = new Map();
 
 io.on('connection', (socket) => {
+    // Listen for notification support information
+    socket.on('notificationSupport', ({ notificationSupported }) => {
+        const user = getCurrentUser(socket.id);
+        if (user) {
+            usersWithNotificationSupport.set(user.id, notificationSupported);
+        }
+    });
+
     socket.on('joinRoom', ({ username, room }) => {
         const user = userJoin(socket.id, username, room);
         const roomName = getRoomName(room);
@@ -216,7 +225,7 @@ io.on('connection', (socket) => {
         const decryptedMsg = decryptMessage(text);
         const message = formatMessage(user.username, decryptedMsg);
 
-        // Speichern Sie die Nachricht im Speicher
+        // Save the message in memory
         if (messages[user.room]) {
             messages[user.room].push(message);
         } else {
@@ -227,15 +236,25 @@ io.on('connection', (socket) => {
         updateCountMap(messageCountMap, timeKey);
 
         const encryptedMessage = encryptMessage(message.text);
-        io.to(user.room).emit('message', { ...message, text: encryptedMessage });
 
-        // Send push notification to all other users in the room
-        socket.broadcast.to(user.room).emit('pushNotification', {
-            title: `Message from ${user.username}`,
-            body: decryptedMsg,
-            sender: user.username
+        // Send the message to the sender
+        socket.emit('message', { ...message, text: encryptedMessage });
+
+        // Send the message to all other users in the room
+        socket.broadcast.to(user.room).emit('message', { ...message, text: encryptedMessage });
+
+        // Send push notification to all other users in the room except the sender if they support notifications
+        getRoomUsers(user.room).forEach(roomUser => {
+            if (roomUser.id !== user.id && usersWithNotificationSupport.get(roomUser.id)) {
+                io.to(roomUser.id).emit('pushNotification', {
+                    title: `Message from ${user.username}`,
+                    body: decryptedMsg,
+                    sender: user.username // Include the sender's username in the push notification
+                });
+            }
         });
     });
+
 
     socket.on('leaveRoom', () => {
         const user = getCurrentUser(socket.id);
@@ -268,9 +287,9 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Neue Route, um die Farben zu aktualisieren
+    // New route to update colors
     socket.on('updateColors', (colors) => {
-        io.emit('colorsUpdated', colors); // Broadcast an alle verbundenen Clients
+        io.emit('colorsUpdated', colors); // Broadcast to all connected clients
     });
 });
 
@@ -285,4 +304,13 @@ function decryptMessage(cipherText) {
     const bytes = CryptoJS.AES.decrypt(cipherText, encryptionKey);
     return bytes.toString(CryptoJS.enc.Utf8);
 }
+
+// Collect data points every minute
+setInterval(() => {
+    const timeKey = getCurrentTimeKey();
+    updateCountMap(userCountMap, timeKey);
+    updateCountMap(roomCountMap, timeKey);
+    updateCountMap(messageCountMap, timeKey);
+}, 60000);
+
 
