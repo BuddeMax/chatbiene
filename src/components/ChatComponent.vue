@@ -1,10 +1,8 @@
 <template>
-  <div class="chat-container">
+  <div class="chat-container" v-touch:swipe.left="showQRCode" v-touch:swipe.right="hideQRCode">
     <header class="chat-header">
-      <h1>Chat Room: {{ roomName }}</h1>
+      <p>Chat Room: {{ roomName }}</p>
       <button @click="leaveRoom" class="btn">Leave Room</button>
-      <div class="server-ip">Server IP: {{ ipAddress }}:8080</div>
-      <canvas ref="qrCanvas" class="qr-code"></canvas> <!-- QR-Code Canvas -->
     </header>
     <main class="chat-main">
       <div class="chat-sidebar">
@@ -28,6 +26,17 @@
         <button class="btn"><i class="fas fa-paper-plane"></i> Send</button>
       </form>
     </div>
+
+    <!-- Modal for QR Code -->
+    <div v-if="showModal" class="modal">
+      <div class="modal-content">
+        <span class="close" @click="hideQRCode">&times;</span>
+        <div class="qr-code-container">
+          <canvas ref="qrCanvas" class="qr-code"></canvas>
+          <p>Server IP: {{ ipAddress }}:8080</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -35,6 +44,7 @@
 import io from 'socket.io-client';
 import QRCode from 'qrcode';
 import CryptoJS from 'crypto-js';
+import Vue2TouchEvents from 'vue2-touch-events';
 
 export default {
   data() {
@@ -47,6 +57,7 @@ export default {
       ipAddress: '',
       roomCode: '',
       username: '',
+      showModal: false,
       encryptionKey: 'ffdedd009668c3679b85433cc4c99d87194f27a484abbc56fd970188053e3fa5' // Replace with a secure key
     };
   },
@@ -167,7 +178,67 @@ export default {
       } else {
         console.log('Notification permission not granted.');
       }
+    },
+    showQRCode() {
+      this.showModal = true;
+      this.$nextTick(() => {
+        this.generateQRCode();
+      });
+    },
+    hideQRCode() {
+      this.showModal = false;
     }
   }
 };
 </script>
+
+<style>
+.qr-code {
+  display: block;
+}
+
+.modal {
+  display: flex;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 300px;
+  text-align: center;
+  border-radius: var(--border-radius);
+}
+
+.qr-code-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+</style>

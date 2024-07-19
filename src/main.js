@@ -11,6 +11,7 @@ import AdminComponent from './components/AdminComponent.vue';
 import LoginComponent from "@/components/LoginComponent.vue";
 import './assets/style.css'; // Importiere die CSS-Datei
 import io from 'socket.io-client';
+import Vue2TouchEvents from 'vue2-touch-events';
 
 // Komponenten
 import Button from 'primevue/button';
@@ -21,6 +22,7 @@ Vue.config.productionTip = false;
 
 Vue.use(VueRouter);
 Vue.use(PrimeVue);
+Vue.use(Vue2TouchEvents);
 
 Vue.component('Button', Button);
 Vue.component('InputText', InputText);
@@ -85,8 +87,7 @@ new Vue({
 if ('serviceWorker' in navigator && 'PushManager' in window) {
     console.log('Service Worker and Push is supported');
 
-
-// Registrieren Sie den Service Worker
+    // Registrieren Sie den Service Worker
     navigator.serviceWorker.register('service-worker.js')
         .then(function(swReg) {
             console.log('Service Worker is registered', swReg);

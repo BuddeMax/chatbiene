@@ -23,6 +23,9 @@ const {
     removeUser
 } = require('./utils/users');
 
+require('dotenv').config();  // Add this line to load environment variables
+
+
 const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
@@ -183,6 +186,19 @@ app.get('/api/admin-data', (req, res) => {
         users: getAllUsers()
     });
 });
+
+app.post('/api/login', (req, res) => {
+    const { password } = req.body;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (password === adminPassword) {
+        res.json({ success: true });
+    } else {
+        res.status(401).json({ success: false, message: 'Incorrect password' });
+    }
+});
+
+
 const usersWithNotificationSupport = new Map();
 
 io.on('connection', (socket) => {
