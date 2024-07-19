@@ -3,6 +3,7 @@
     <header class="chat-header">
       <p>Chat Room: {{ roomName }}</p>
       <button @click="leaveRoom" class="btn">Leave Room</button>
+      <button class="btn show-qr-desktop" @click="showQRCode">Show QR Code</button>
     </header>
     <main class="chat-main">
       <div class="chat-sidebar">
@@ -14,7 +15,7 @@
         </ul>
       </div>
       <div class="chat-messages">
-        <div v-for="message in messages" :key="message.time" class="message">
+        <div v-for="message in messages" :key="message.time" :class="['message', { 'my-message': message.username === username }]">
           <p class="meta">{{ message.username }} <span>{{ message.time }}</span></p>
           <p class="text">{{ decryptMessage(message.text) }}</p>
         </div>
@@ -240,5 +241,38 @@ export default {
   color: black;
   text-decoration: none;
   cursor: pointer;
+}
+
+.message {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 5px;
+  background: #f4f4f4;
+}
+
+.my-message {
+  background: #dcf8c6;
+  margin-left: auto;
+  text-align: right;
+}
+
+.meta {
+  font-weight: bold;
+}
+
+.text {
+  margin: 5px 0 0;
+}
+
+/* Hide the QR code button on mobile */
+.show-qr-desktop {
+  display: none;
+}
+
+/* Show the QR code button on desktop */
+@media (min-width: 768px) {
+  .show-qr-desktop {
+    display: inline-block;
+  }
 }
 </style>
