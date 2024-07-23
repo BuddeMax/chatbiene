@@ -1,18 +1,24 @@
 module.exports = {
   devServer: {
-    allowedHosts: "all",
+    https: true, // Aktiviert HTTPS für den Entwicklungsserver
+    allowedHosts: "all", // Erlaubt alle Hosts für Entwicklungszwecke
     proxy: {
       '/socket.io': {
-        target: 'http://localhost:3000',
-        ws: true,
+        target: 'https://localhost:3000', // Ziel-URL für WebSocket-Proxy
+        ws: true, // WebSocket-Anfragen werden weitergeleitet
+        changeOrigin: true, // Setzt den Origin-Header des Proxys
+        secure: false, // Für Entwicklungszwecke bei selbstsignierten Zertifikaten
       },
       '/sockjs-node': {
-        target: 'http://localhost:3000',
-        ws: false,
+        target: 'https://localhost:3000', // Ziel-URL für SockJS-Proxy
+        ws: false, // Kein WebSocket-Proxy, sondern HTTP-Proxy
+        changeOrigin: true, // Setzt den Origin-Header des Proxys
+        secure: false, // Für Entwicklungszwecke bei selbstsignierten Zertifikaten
       },
       '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true
+        target: 'https://localhost:3000', // Ziel-URL für API-Proxy
+        changeOrigin: true, // Setzt den Origin-Header des Proxys
+        secure: false, // Für Entwicklungszwecke bei selbstsignierten Zertifikaten
       },
     },
   },
