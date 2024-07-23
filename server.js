@@ -1,10 +1,10 @@
 const path = require('path');
 const express = require('express');
-const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const os = require('os');
 const socketio = require('socket.io');
 const crypto = require('crypto');
-const fs = require('fs');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const moment = require('moment');
 const CryptoJS = require('crypto-js');
@@ -27,7 +27,20 @@ const {
 require('dotenv').config();
 
 const app = express();
-const server = http.createServer(app);
+
+// Ensure the SSL key and certificate paths are only declared once
+const SSL_KEY_PATH = process.env.SSL_KEY_PATH;
+const SSL_CERT_PATH = process.env.SSL_CERT_PATH;
+
+const options = {
+    key: fs.readFileSync(SSL_KEY_PATH),
+    cert: fs.readFileSync(SSL_CERT_PATH),
+};
+
+// Initialize HTTPS server
+const server = https.createServer(options, app);
+
+// Initialize socket.io after server creation
 const io = socketio(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -398,6 +411,15 @@ io.on('connection', (socket) => {
         io.emit('colorsUpdated', colors); // Broadcast to all connected clients
     });
 });
+
+const http = require('http');
+
+const httpServer = http.createServer((req, res) => {
+    res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
+    res.end();
+});
+
+httpServer.listen(80);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
