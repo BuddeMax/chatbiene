@@ -36,7 +36,7 @@ app.use(express.json());
 const botName = 'ChatCord Bot';
 const messages = {}; // Store messages in memory
 const questions = {}; // Store questions in memory
-const encryptionKey = 'ffdedd009668c3679b85433cc4c99d87194f27a484abbc56fd970188053e3fa5'; // Replace with a secure key
+const encryptionKey = 'ffdedd009668c3679b85433cc4c99d87194f27a484abbc56fd970188053e3fa5'; // Replace with a secure key test
 
 // Maps to store the count of users, rooms, and messages over time
 const userCountMap = new Map();
