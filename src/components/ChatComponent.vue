@@ -308,31 +308,30 @@ export default {
 .message {
   padding: var(--padding);
   margin-bottom: 10px;
-  background-color: var(--background-color);
+  background-color: #f1f1f1; /* Hintergrundfarbe für alle Nachrichten */
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
   max-width: 70%;
   word-wrap: break-word;
 }
 
-.message.sent {
-  background-color: var(--primary-color);
-  color: #fff;
+.chat-messages .message.sent {
+  background-color: #e0e0e0 !important; /* Grau für gesendete Nachrichten */
+  color: #000 !important; /* Schwarz für Text in gesendeten Nachrichten */
   align-self: flex-end;
-  margin-left: auto; /* Ensure it is right aligned */
+  margin-left: auto; /* Sicherstellen, dass es rechtsbündig ist */
 }
 
 .message.received {
-  background-color: var(--background-color);
-  color: var(--text-color);
+  background-color: #f1f1f1; /* Hintergrundfarbe für empfangene Nachrichten */
+  color: #000; /* Textfarbe für empfangene Nachrichten */
   align-self: flex-start;
-  margin-right: auto; /* Ensure it is left aligned */
+  margin-right: auto; /* Sicherstellen, dass es linksbündig ist */
 }
 
 .message .meta {
   font-size: 12px;
   font-weight: 500;
-  color: var(--primary-color);
   opacity: 0.8;
   margin-bottom: 5px;
 }
