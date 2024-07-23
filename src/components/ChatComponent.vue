@@ -1,28 +1,43 @@
 <template>
   <div class="chat-container" v-touch:swipe.left="showQRCode" v-touch:swipe.right="hideQRCode">
     <header class="chat-header">
-      <p>Chat Room: {{ roomName }}</p>
-      <button @click="leaveRoom" class="btn">Leave Room</button>
-      <button class="btn show-qr-desktop" @click="showQRCode">Show QR Code</button>
+      <div class="room-info">
+        <p><strong>Raum-Name:</strong> {{ roomName }}</p>
+        <p><strong>Raum-Code:</strong> {{ roomCode }}</p>
+      </div>
+      <div class="button-container">
+        <button @click="leaveRoom" class="btn">Raum verlassen</button>
+        <button class="btn show-qr-desktop" @click="showQRCode">QR-Code anzeigen</button>
+      </div>
     </header>
     <main class="chat-main">
       <div class="chat-sidebar">
-        <h3><i class="fas fa-comments"></i> Room Code:</h3>
-        <h2>{{ roomCode }}</h2>
         <h3><i class="fas fa-users"></i> Users</h3>
         <ul>
           <li v-for="user in users" :key="user.id">{{ user.username }}</li>
         </ul>
       </div>
-      <div class="chat-messages">
-        <div v-for="message in messages" :key="message.time" :class="['message', { 'my-message': message.username === username }]">
-          <p class="meta">{{ message.username }} <span>{{ message.time }}</span></p>
-          <p class="text">{{ decryptMessage(message.text) }}</p>
+      <div class="chat-content">
+        <div class="tabs">
+          <button @click="activeTab = 'chat'" :class="{ active: activeTab === 'chat' }">Chat</button>
+          <button @click="activeTab = 'questions'" :class="{ active: activeTab === 'questions' }">Fragen</button>
+        </div>
+        <div v-if="activeTab === 'chat'" class="chat-messages">
+          <div v-for="message in messages" :key="message.time" :class="['message', { 'sent': message.username === username, 'received': message.username !== username }]">
+            <p class="meta">{{ message.username }} <span>{{ message.time }}</span></p>
+            <p class="text">{{ decryptMessage(message.text) }}</p>
+          </div>
+        </div>
+        <div v-if="activeTab === 'questions'" class="chat-questions">
+          <div v-for="question in questions" :key="question.time" :class="['message', { 'sent': question.username === username, 'received': question.username !== username }]">
+            <p class="meta">{{ question.username }} <span>{{ question.time }}</span></p>
+            <p class="text">{{ decryptMessage(question.text) }}</p>
+          </div>
         </div>
       </div>
     </main>
     <div class="chat-form-container">
-      <form @submit.prevent="sendMessage">
+      <form @submit.prevent="sendMessageOrQuestion">
         <input v-model="message" type="text" placeholder="Enter Message" required autocomplete="off" />
         <button class="btn"><i class="fas fa-paper-plane"></i> Send</button>
       </form>
@@ -53,13 +68,15 @@ export default {
       socket: null,
       message: '',
       messages: [],
+      questions: [], // Add questions array
       users: [],
       roomName: '',
       ipAddress: '',
       roomCode: '',
       username: '',
       showModal: false,
-      encryptionKey: 'ffdedd009668c3679b85433cc4c99d87194f27a484abbc56fd970188053e3fa5' // Replace with a secure key
+      encryptionKey: 'ffdedd009668c3679b85433cc4c99d87194f27a484abbc56fd970188053e3fa5', // Replace with a secure key
+      activeTab: 'chat' // Add activeTab state
     };
   },
   created() {
@@ -88,6 +105,13 @@ export default {
       }
     });
 
+    this.socket.on('question', (question) => { // Listen for questions
+      this.questions.push(question);
+      if (question.username !== 'ChatCord Bot') {
+        this.scrollToBottom();
+      }
+    });
+
     this.socket.on('pushNotification', (notification) => {
       if (notification.sender !== this.username) {
         this.showNotification(notification.title, { body: notification.body });
@@ -112,10 +136,14 @@ export default {
     this.askNotificationPermission(); // Ask for notification permission on created
   },
   methods: {
-    sendMessage() {
+    sendMessageOrQuestion() {
       if (this.message.trim()) {
         const encryptedMessage = this.encryptMessage(this.message);
-        this.socket.emit('chatMessage', { text: encryptedMessage, sender: this.username });
+        if (this.activeTab === 'chat') {
+          this.socket.emit('chatMessage', { text: encryptedMessage, sender: this.username });
+        } else if (this.activeTab === 'questions') {
+          this.socket.emit('question', { text: encryptedMessage, sender: this.username });
+        }
         this.message = '';
       }
     },
@@ -129,7 +157,13 @@ export default {
     scrollToBottom() {
       this.$nextTick(() => {
         const chatMessages = this.$el.querySelector('.chat-messages');
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (chatMessages) {
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        const chatQuestions = this.$el.querySelector('.chat-questions');
+        if (chatQuestions) {
+          chatQuestions.scrollTop = chatQuestions.scrollHeight;
+        }
       });
     },
     leaveRoom() {
@@ -194,8 +228,136 @@ export default {
 </script>
 
 <style>
-.qr-code {
-  display: block;
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  max-width: 900px;
+  background: #fff;
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+}
+
+.chat-header {
+  background: var(--primary-color);
+  color: #fff;
+  padding: var(--padding);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top-left-radius: var(--border-radius);
+  border-top-right-radius: var(--border-radius);
+}
+
+.chat-main {
+  display: flex;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.chat-sidebar {
+  width: 250px;
+  background: #fff;
+  padding: var(--padding);
+  border-right: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 10px;
+  background: var(--primary-color);
+}
+
+.tabs button {
+  padding: 10px;
+  border: none;
+  background-color: var(--primary-color);
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s;
+  flex: 1;
+}
+
+.tabs button.active {
+  background-color: #0056b3;
+}
+
+.chat-messages,
+.chat-questions {
+  flex-grow: 1;
+  padding: var(--padding);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.message {
+  padding: var(--padding);
+  margin-bottom: 10px;
+  background-color: var(--background-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  max-width: 70%;
+  word-wrap: break-word;
+}
+
+.message.sent {
+  background-color: var(--primary-color);
+  color: #fff;
+  align-self: flex-end;
+  margin-left: auto; /* Ensure it is right aligned */
+}
+
+.message.received {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  align-self: flex-start;
+  margin-right: auto; /* Ensure it is left aligned */
+}
+
+.message .meta {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--primary-color);
+  opacity: 0.8;
+  margin-bottom: 5px;
+}
+
+.chat-form-container {
+  padding: var(--padding);
+  background-color: var(--background-color);
+  border-top: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+}
+
+.chat-form-container form {
+  display: flex;
+  width: 100%;
+}
+
+.chat-form-container input[type='text'] {
+  font-size: 16px;
+  padding: var(--padding);
+  height: 40px;
+  flex-grow: 1;
+  border-radius: var(--border-radius);
+  border: 1px solid #ddd;
+  margin-right: var(--padding);
 }
 
 .modal {
@@ -229,6 +391,10 @@ export default {
   align-items: center;
 }
 
+.qr-code {
+  display: block;
+}
+
 .close {
   color: #aaa;
   float: right;
@@ -243,27 +409,6 @@ export default {
   cursor: pointer;
 }
 
-.message {
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 5px;
-  background: #f4f4f4;
-}
-
-.my-message {
-  background: #dcf8c6;
-  margin-left: auto;
-  text-align: right;
-}
-
-.meta {
-  font-weight: bold;
-}
-
-.text {
-  margin: 5px 0 0;
-}
-
 /* Hide the QR code button on mobile */
 .show-qr-desktop {
   display: none;
@@ -273,6 +418,11 @@ export default {
 @media (min-width: 768px) {
   .show-qr-desktop {
     display: inline-block;
+  }
+
+  .button-container {
+    flex-direction: row;
+    gap: 20px;
   }
 }
 </style>

@@ -9,6 +9,7 @@ const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const moment = require('moment');
 const CryptoJS = require('crypto-js');
 const formatMessage = require('./utils/messages');
+const formatQuestion = require('./utils/questions');
 const {
     userJoin,
     getCurrentUser,
@@ -23,8 +24,7 @@ const {
     removeUser
 } = require('./utils/users');
 
-require('dotenv').config();  // Add this line to load environment variables
-
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
@@ -35,6 +35,7 @@ app.use(express.json());
 
 const botName = 'ChatCord Bot';
 const messages = {}; // Store messages in memory
+const questions = {}; // Store questions in memory
 const encryptionKey = 'ffdedd009668c3679b85433cc4c99d87194f27a484abbc56fd970188053e3fa5'; // Replace with a secure key
 
 // Maps to store the count of users, rooms, and messages over time
@@ -104,6 +105,31 @@ function writeMessagesToCsv(roomName, roomCode, messages) {
     });
 }
 
+// Function to write questions to CSV
+function writeQuestionsToCsv(roomName, roomCode, questions) {
+    const date = moment().format('YYYYMMDD');
+    const fileName = `${roomName}_${roomCode}_questions_${date}.csv`;
+    const csvWriter = createCsvWriter({
+        path: path.join(csvDirectory, fileName),
+        header: [
+            { id: 'username', title: 'USERNAME' },
+            { id: 'time', title: 'TIME' },
+            { id: 'text', title: 'TEXT' }
+        ]
+    });
+
+    const data = questions.map(q => ({
+        username: hashUsername(q.username),
+        time: q.time,
+        text: q.text
+    }));
+
+    return csvWriter.writeRecords(data).then(() => {
+        console.log(`Questions for room ${roomName} (${roomCode}) have been written to CSV.`);
+        return fileName;
+    });
+}
+
 // API endpoint to download CSV file for active room
 app.get('/api/download-csv/:roomCode', async (req, res) => {
     const { roomCode } = req.params;
@@ -132,6 +158,34 @@ app.get('/api/download-csv/:roomCode', async (req, res) => {
     }
 });
 
+// API endpoint to download questions CSV file for active room
+app.get('/api/download-questions-csv/:roomCode', async (req, res) => {
+    const { roomCode } = req.params;
+    const roomName = getRoomName(roomCode);
+    if (!roomName) {
+        return res.status(404).json({ error: 'Room not found' });
+    }
+
+    const roomQuestions = questions[roomCode] || [];
+    if (roomQuestions.length === 0) {
+        return res.status(404).json({ error: 'No questions found for this room' });
+    }
+
+    try {
+        const fileName = await writeQuestionsToCsv(roomName, roomCode, roomQuestions);
+        const filePath = path.join(csvDirectory, fileName);
+        res.download(filePath, fileName, (err) => {
+            if (err) {
+                console.error('Error downloading file:', err);
+                res.status(500).json({ error: 'Error downloading file' });
+            }
+        });
+    } catch (error) {
+        console.error('Error writing questions to CSV:', error);
+        res.status(500).json({ error: 'Error writing questions to CSV' });
+    }
+});
+
 // API endpoint to fetch statistics
 app.get('/api/statistics', (req, res) => {
     res.json({
@@ -146,6 +200,7 @@ app.post('/api/create-room', (req, res) => {
     const roomCode = generateRoomCode();
     addRoom(roomCode, roomName);
     messages[roomCode] = []; // Initialize message buffer for the room
+    questions[roomCode] = []; // Initialize question buffer for the room
     res.json({ roomCode });
 
     const timeKey = getCurrentTimeKey();
@@ -161,7 +216,9 @@ app.post('/api/close-room', (req, res) => {
     });
     closeRoom(roomCode);
     writeMessagesToCsv(roomName, roomCode, messages[roomCode]); // Write messages to CSV on room close
+    writeQuestionsToCsv(roomName, roomCode, questions[roomCode]); // Write questions to CSV on room close
     delete messages[roomCode]; // Remove messages of the closed room
+    delete questions[roomCode]; // Remove questions of the closed room
     res.json({ success: true });
 });
 
@@ -197,7 +254,6 @@ app.post('/api/login', (req, res) => {
         res.status(401).json({ success: false, message: 'Incorrect password' });
     }
 });
-
 
 const usersWithNotificationSupport = new Map();
 
@@ -271,6 +327,40 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('question', ({ text, sender }) => {
+        const user = getCurrentUser(socket.id);
+        const decryptedMsg = decryptMessage(text);
+        const question = formatQuestion(user.username, decryptedMsg);
+
+        // Save the question in memory
+        if (questions[user.room]) {
+            questions[user.room].push(question);
+        } else {
+            questions[user.room] = [question];
+        }
+
+        const timeKey = getCurrentTimeKey();
+        updateCountMap(messageCountMap, timeKey);
+
+        const encryptedQuestion = encryptMessage(question.text);
+
+        // Send the question to the sender
+        socket.emit('question', { ...question, text: encryptedQuestion });
+
+        // Send the question to all other users in the room
+        socket.broadcast.to(user.room).emit('question', { ...question, text: encryptedQuestion });
+
+        // Send push notification to all other users in the room except the sender if they support notifications
+        getRoomUsers(user.room).forEach(roomUser => {
+            if (roomUser.id !== user.id && usersWithNotificationSupport.get(roomUser.id)) {
+                io.to(roomUser.id).emit('pushNotification', {
+                    title: `Question from ${user.username}`,
+                    body: decryptedMsg,
+                    sender: user.username
+                });
+            }
+        });
+    });
 
     socket.on('leaveRoom', () => {
         const user = getCurrentUser(socket.id);
@@ -328,5 +418,3 @@ setInterval(() => {
     updateCountMap(roomCountMap, timeKey);
     updateCountMap(messageCountMap, timeKey);
 }, 60000);
-
-

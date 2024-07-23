@@ -83,7 +83,6 @@ a {
     width: 100%;
     max-width: 900px;
     background: #fff;
-    border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
     overflow: hidden;
 }
@@ -283,7 +282,8 @@ a {
     }
 
     .chat-header {
-        border-radius: 0 !important;
+        border-radius: 0;
+
     }
 
     .chat-header .qr-code {
