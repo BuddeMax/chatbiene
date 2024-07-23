@@ -2,8 +2,8 @@
   <div class="chat-container" v-touch:swipe.left="showQRCode" v-touch:swipe.right="hideQRCode">
     <header class="chat-header">
       <div class="room-info">
-        <p><strong>Raum-Name:</strong> {{ roomName }}</p>
-        <p><strong>Raum-Code:</strong> {{ roomCode }}</p>
+        <p><strong>Raum-Name:</strong> {{ sanitizedRoomName }}</p>
+        <p><strong>Raum-Code:</strong> {{ sanitizedRoomCode }}</p>
       </div>
       <div class="button-container">
         <button @click="leaveRoom" class="btn">Raum verlassen</button>
@@ -14,7 +14,7 @@
       <div class="chat-sidebar">
         <h3><i class="fas fa-users"></i> Users</h3>
         <ul>
-          <li v-for="user in users" :key="user.id">{{ user.username }}</li>
+          <li v-for="user in sanitizedUsers" :key="user.id">{{ user.username }}</li>
         </ul>
       </div>
       <div class="chat-content">
@@ -23,13 +23,13 @@
           <button @click="activeTab = 'questions'" :class="{ active: activeTab === 'questions' }">Fragen</button>
         </div>
         <div v-if="activeTab === 'chat'" class="chat-messages">
-          <div v-for="message in messages" :key="message.time" :class="['message', { 'sent': message.username === username, 'received': message.username !== username }]">
+          <div v-for="message in sanitizedMessages" :key="message.time" :class="['message', message.username === username ? 'sent' : 'received']">
             <p class="meta">{{ message.username }} <span>{{ message.time }}</span></p>
             <p class="text">{{ decryptMessage(message.text) }}</p>
           </div>
         </div>
         <div v-if="activeTab === 'questions'" class="chat-questions">
-          <div v-for="question in questions" :key="question.time" :class="['message', { 'sent': question.username === username, 'received': question.username !== username }]">
+          <div v-for="question in sanitizedQuestions" :key="question.time" :class="['message', question.username === username ? 'sent' : 'received']">
             <p class="meta">{{ question.username }} <span>{{ question.time }}</span></p>
             <p class="text">{{ decryptMessage(question.text) }}</p>
           </div>
@@ -49,7 +49,7 @@
         <span class="close" @click="hideQRCode">&times;</span>
         <div class="qr-code-container">
           <canvas ref="qrCanvas" class="qr-code"></canvas>
-          <p>Server IP: {{ ipAddress }}:8080</p>
+          <p>Server IP: {{ sanitizedIpAddress }}:8080</p>
         </div>
       </div>
     </div>
@@ -68,45 +68,51 @@ export default {
       socket: null,
       message: '',
       messages: [],
-      questions: [], // Add questions array
+      questions: [],
       users: [],
       roomName: '',
       ipAddress: '',
       roomCode: '',
       username: '',
       showModal: false,
-      encryptionKey: 'ffdedd009668c3679b85433cc4c99d87194f27a484abbc56fd970188053e3fa5', // Replace with a secure key
-      activeTab: 'chat' // Add activeTab state
+      encryptionKey: process.env.VUE_APP_ENCRYPTION_KEY || '', // Replace with environment variable
+      activeTab: 'chat'
     };
   },
   created() {
     const { username, room, roomName, roomCode } = this.$route.query;
-    this.roomName = roomName || room;
-    this.roomCode = roomCode || room;
-    this.username = username;
+    this.roomName = this.sanitize(roomName || room);
+    this.roomCode = this.sanitize(roomCode || room);
+    this.username = this.sanitize(username);
     this.socket = io();
 
     this.socket.emit('joinRoom', { username, room });
 
     this.socket.on('roomData', ({ roomName, roomCode }) => {
-      this.roomName = roomName;
-      this.roomCode = roomCode;
+      this.roomName = this.sanitize(roomName);
+      this.roomCode = this.sanitize(roomCode);
       this.generateQRCode();
     });
 
     this.socket.on('roomUsers', ({ room, users }) => {
-      this.users = users;
+      this.users = users.map(user => this.validateUser(user));
     });
 
     this.socket.on('message', (message) => {
-      this.messages.push(message);
+      const validatedMessage = this.validateMessage(message);
+      if (validatedMessage) {
+        this.messages.push(validatedMessage);
+      }
       if (message.username !== 'ChatCord Bot') {
         this.scrollToBottom();
       }
     });
 
-    this.socket.on('question', (question) => { // Listen for questions
-      this.questions.push(question);
+    this.socket.on('question', (question) => {
+      const validatedQuestion = this.validateQuestion(question);
+      if (validatedQuestion) {
+        this.questions.push(validatedQuestion);
+      }
       if (question.username !== 'ChatCord Bot') {
         this.scrollToBottom();
       }
@@ -114,12 +120,12 @@ export default {
 
     this.socket.on('pushNotification', (notification) => {
       if (notification.sender !== this.username) {
-        this.showNotification(notification.title, { body: notification.body });
+        this.showNotification(notification.title, { body: this.sanitize(notification.body) });
       }
     });
 
     this.socket.on('ipAddress', (ip) => {
-      this.ipAddress = ip;
+      this.ipAddress = this.sanitize(ip);
       this.generateQRCode();
     });
 
@@ -133,9 +139,57 @@ export default {
       this.leaveRoom();
     });
 
-    this.askNotificationPermission(); // Ask for notification permission on created
+    this.askNotificationPermission();
+  },
+  beforeDestroy() {
+    if (this.socket) {
+      this.socket.off('roomData');
+      this.socket.off('roomUsers');
+      this.socket.off('message');
+      this.socket.off('question');
+      this.socket.off('pushNotification');
+      this.socket.off('ipAddress');
+      this.socket.off('roomClosed');
+      this.socket.off('userRemoved');
+    }
   },
   methods: {
+    sanitize(input) {
+      const element = document.createElement('div');
+      element.innerText = input;
+      return element.innerHTML;
+    },
+    validateUser(user) {
+      if (user && typeof user.username === 'string' && user.username.trim()) {
+        return {
+          ...user,
+          username: this.sanitize(user.username)
+        };
+      }
+      return null;
+    },
+    validateMessage(message) {
+      if (message && typeof message.text === 'string' && message.text.trim() && typeof message.username === 'string' && message.username.trim()) {
+        return {
+          ...message,
+          username: this.sanitize(message.username),
+          text: this.sanitize(message.text),
+          time: message.time // Ensure time is included
+        };
+      }
+      return null;
+    },
+    validateQuestion(question) {
+      if (question && typeof question.text === 'string' && question.text.trim() && typeof question.username === 'string' && question.username.trim()) {
+        return {
+          ...question,
+          username: this.sanitize(question.username),
+          text: this.sanitize(question.text),
+          time: question.time // Ensure time is included
+        };
+      }
+      return null;
+    },
     sendMessageOrQuestion() {
       if (this.message.trim()) {
         const encryptedMessage = this.encryptMessage(this.message);
@@ -177,29 +231,26 @@ export default {
       if (this.ipAddress && this.roomCode) {
         const url = `http://${this.ipAddress}:8080/?roomCode=${this.roomCode}`;
         QRCode.toCanvas(this.$refs.qrCanvas, url, { width: 128, height: 128 }, (error) => {
-          if (error) console.error(error);
-        });
-      }
-    },
-    askNotificationPermission() {
-      if (!('Notification' in window)) {
-        console.error('This browser does not support desktop notification');
-        alert('This browser does not support desktop notification');
-        this.socket.emit('notificationSupport', { notificationSupported: false });
-      } else if (Notification.permission === 'granted') {
-        console.log('Notification permission granted.');
-        this.socket.emit('notificationSupport', { notificationSupported: true });
-      } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then((permission) => {
-          if (permission === 'granted') {
-            console.log('Notification permission granted.');
-            this.socket.emit('notificationSupport', { notificationSupported: true });
-          } else {
-            console.log('Notification permission denied.');
-            this.socket.emit('notificationSupport', { notificationSupported: false });
+          if (error) {
+            console.error('QR-Code-Generierung fehlgeschlagen', error);
+            alert('Fehler beim Generieren des QR-Codes. Bitte versuchen Sie es später erneut.');
           }
         });
       } else {
+        console.error('Fehlende IP-Adresse oder Raumcode für die QR-Code-Generierung');
+      }
+    },
+    askNotificationPermission() {
+      if ('Notification' in window) {
+        Notification.requestPermission().then((permission) => {
+          const isSupported = permission === 'granted';
+          this.socket.emit('notificationSupport', { notificationSupported: isSupported });
+        }).catch((error) => {
+          console.error('Notification permission error:', error);
+          this.socket.emit('notificationSupport', { notificationSupported: false });
+        });
+      } else {
+        console.error('This browser does not support desktop notification');
         this.socket.emit('notificationSupport', { notificationSupported: false });
       }
     },
@@ -222,6 +273,26 @@ export default {
     },
     hideQRCode() {
       this.showModal = false;
+    }
+  },
+  computed: {
+    sanitizedRoomName() {
+      return this.sanitize(this.roomName);
+    },
+    sanitizedRoomCode() {
+      return this.sanitize(this.roomCode);
+    },
+    sanitizedIpAddress() {
+      return this.sanitize(this.ipAddress);
+    },
+    sanitizedUsers() {
+      return this.users.map(user => this.validateUser(user)).filter(user => user !== null);
+    },
+    sanitizedMessages() {
+      return this.messages.map(message => this.validateMessage(message)).filter(message => message !== null);
+    },
+    sanitizedQuestions() {
+      return this.questions.map(question => this.validateQuestion(question)).filter(question => question !== null);
     }
   }
 };
@@ -315,14 +386,14 @@ export default {
   word-wrap: break-word;
 }
 
-.message.sent {
-  background-color: var(--primary-color);
-  color: #fff;
+.chat-content .chat-messages .message.sent {
+  background-color: #e0e0e0; /* Changed to grey */
+  color: #000; /* Adjust text color to black for contrast */
   align-self: flex-end;
   margin-left: auto; /* Ensure it is right aligned */
 }
 
-.message.received {
+.chat-content .chat-messages .message.received {
   background-color: var(--background-color);
   color: var(--text-color);
   align-self: flex-start;
@@ -335,6 +406,11 @@ export default {
   color: var(--primary-color);
   opacity: 0.8;
   margin-bottom: 5px;
+}
+
+.message.sent .meta,
+.message.received .meta {
+  display: block;
 }
 
 .chat-form-container {
